@@ -1,16 +1,9 @@
 # Virtual Environment
+venv/
 .venv/
+backend/venv/
+backend/.venv/
 
-# Python Cache
+# Python
 __pycache__/
 *.pyc
-
-# Environment Variables
-.env
-
-# IDE
-.vscode/
-
-# OS
-.DS_Store
-Thumbs.db

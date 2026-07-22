@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.schemas.repository import RepositoryRequest
 
 router=APIRouter(
     prefix="/repositories",
@@ -7,8 +8,9 @@ router=APIRouter(
 
 
 @router.post("/")
-def create_repository():
+def create_repository(request:RepositoryRequest):
     return {
     "status": "accepted",
-    "message": "Repository accepted for analysis."
+    "message": "Repository accepted for analysis.",
+    "url": request.url
 }
