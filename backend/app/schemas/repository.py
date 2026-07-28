@@ -1,5 +1,6 @@
 from pydantic import BaseModel , field_validator
 from urllib.parse import urlparse
+from typing import List , Optional
 
 class RepositoryRequest(BaseModel):
     url: str
@@ -20,3 +21,17 @@ class RepositoryRequest(BaseModel):
         if len(path_parts)<2:
             raise ValueError("Geçerli bir repository belirtmelisiniz (Örn: https://github.com/kullanici/repo).")
         return value
+
+class Dependency(BaseModel):
+    name:str
+    ecosystem:str
+    version:Optional[str] = None
+
+class Framework(BaseModel):
+    name:str
+    ecosystem:str
+
+class RepositoryResponse(BaseModel):
+    dependencies : List[Dependency] = []
+    frameworks : List[Framework] = []
+

@@ -13,32 +13,39 @@ class ScannerService:
         self.IGNORE_FILES = {
             ".DS_Store", ".env"
         }
+        # Aranacak hedef konfigürasyon dosyaları
+        self.TARGET_CONFIGS = {
+            "requirements.txt", "package.json", "pyproject.toml"
+        }
 
     def should_ignore(self, path: Path) -> bool:
-      
         if path.name in self.IGNORE_DIRS or path.name in self.IGNORE_FILES:
             return True
         return False
 
-    def build_tree(self, repo_path: Path) -> list:
-       
+    def build_tree(self, repo_path: Path) -> tuple:
         tree = []
+        config_files = [] 
+
         for root, dirs, files in os.walk(repo_path):
             current_path = Path(root)
             
-
             dirs[:] = [d for d in dirs if not self.should_ignore(current_path / d)]
             
             for file in files:
                 file_path = current_path / file
                 if not self.should_ignore(file_path):
-                    relative_path=file_path.relative_to(repo_path)
+                   
+                    relative_path = file_path.relative_to(repo_path)
                     tree.append(str(relative_path))
+
                     
-        return tree
+                    if file in self.TARGET_CONFIGS:
+                        config_files.append(str(file_path))
+                    
+        return tree, config_files
 
     def count_languages(self, file_list: list) -> dict:
-      
         extensions = []
         for file_path in file_list:
             ext = Path(file_path).suffix.lower()
@@ -48,19 +55,17 @@ class ScannerService:
         return dict(Counter(extensions))
 
     def scan_repository(self, repo_path_str: str) -> dict:
-       
         repo_path = Path(repo_path_str)
         
         
-        file_tree = self.build_tree(repo_path)
-        
+        file_tree, found_configs = self.build_tree(repo_path)
         
         language_stats = self.count_languages(file_tree)
         
-    
+        
         return {
             "total_files": len(file_tree),
             "language_distribution": language_stats,
-            "tree": file_tree
+            "tree": file_tree,
+            "config_files": found_configs
         }
-    
