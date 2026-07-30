@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import health, repository
+from app.api import health, repository ,scanner
 app = FastAPI(
     title="CodeAtlas",
     description="Understand Any Repository" ,
@@ -9,6 +9,7 @@ app = FastAPI(
 
 app.include_router(health.router)
 app.include_router(repository.router)
+app.include_router(scanner.router)
 
 
 @app.get("/")
