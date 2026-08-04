@@ -33,7 +33,7 @@ def parse_requirements(file_content: str) -> list[dict]:
             continue
 
         dependency = {
-            "package": match.group("package"),
+            "name": match.group("package"),
             "operator": match.group("operator"),
             "version": match.group("version"),
             "extras": (
@@ -41,6 +41,7 @@ def parse_requirements(file_content: str) -> list[dict]:
                 if match.group("extras")
                 else []
             ),
+            "ecosystem": "pypi"
         }
 
         dependencies.append(dependency)

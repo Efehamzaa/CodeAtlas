@@ -31,7 +31,19 @@ class Framework(BaseModel):
     name:str
     ecosystem:str
 
+class FileArchitecture(BaseModel):
+    imports:List[str] = []
+    functions:List[str] = []
+    classes:List[str] = []
+
+class AnalyzedFile(BaseModel):
+    file_path:str
+    architecture:FileArchitecture
+
 class RepositoryResponse(BaseModel):
     dependencies : List[Dependency] = []
     frameworks : List[Framework] = []
+    files: List[AnalyzedFile] = []
+
+
 

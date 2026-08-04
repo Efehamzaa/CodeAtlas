@@ -15,11 +15,11 @@ class PackageJsonParser:
         dev_dependencies = data.get("devDependencies" , {})
 
         for isim , versiyon in dependencies.items():
-            dict_package={"name":isim , "version":versiyon}
+            dict_package={"name":isim , "version":versiyon , "ecosystem":"npm"}
             parsed_data.append(dict_package)
 
         for isim , versiyon in dev_dependencies.items():
-            dict_package_dev={"name":isim , "version":versiyon}
+            dict_package_dev={"name":isim , "version":versiyon , "ecosystem":"npm" }
             parsed_data.append(dict_package_dev)
 
         return parsed_data

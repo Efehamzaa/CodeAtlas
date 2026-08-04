@@ -1,33 +1,36 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from app.schemas.repository import RepositoryRequest
+from fastapi import APIRouter, HTTPException
+from app.schemas.repository import RepositoryRequest, RepositoryResponse
 from app.services.repository_service import RepositoryService
-from app.services.scanner_service import ScannerService
+from app.services.analysis_service import AnalysisService   
 
 router = APIRouter(prefix="/repositories", tags=["Repositories"])
 repo_service = RepositoryService()
-scanner_service=ScannerService()
+analysis_service = AnalysisService()
 
-@router.post("/")
-async def analyze_repository(request: RepositoryRequest, background_tasks: BackgroundTasks):
+@router.post("/" , response_model=RepositoryResponse)
+async def analyze_repository(request: RepositoryRequest):
     try:
-    
+        
         temp_path = repo_service.clone_repository(request.url)
 
-        scan_results=scanner_service.scan_repository(temp_path)
         
-        background_tasks.add_task(repo_service.cleanup_repository, temp_path)
+        response_data = analysis_service.analyze_full_repository(temp_path)
         
-        return {
-            "status": "success",
-            "message": "Repository başarıyla klonlandı ve analiz için hazırlandı.",
-            "data": {
-                "url": request.url,
-                "analysis":scan_results
-            }
-        }
+        
+        if hasattr(response_data, 'repository_url'):
+            response_data.repository_url = request.url
+
+        
+        return response_data
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        
+        print(f"Hata detayı: {str(e)}") 
         raise HTTPException(status_code=500, detail="İşlem sırasında sunucu kaynaklı bir hata oluştu.")
+
+    finally:
     
+        if 'temp_path' in locals():
+            repo_service.cleanup_repository(temp_path)
