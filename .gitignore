@@ -7,3 +7,7 @@ backend/.venv/
 # Python
 __pycache__/
 *.pyc
+
+codeatlas.db
+
+.env
