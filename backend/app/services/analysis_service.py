@@ -55,10 +55,23 @@ class AnalysisService:
             try:
                 file_name = os.path.basename(config_file)
                 print(f"> Şu an inceleniyor: {file_name}")
-                with open(config_file, "r", encoding="utf-8") as f:
-                    config_content = f.read()
+                
+                # Dosyayı doğrudan bayt okuyup tüm olası BOM ve kodlama hatalarını bypass ediyoruz
+                with open(config_file, "rb") as f:
+                    raw_data = f.read()
+                
+                # Karakter kodlamasını otomatik algılayan en güvenli dönüştürme
+                if raw_data.startswith(b'\xff\xfe') or raw_data.startswith(b'\xfe\xff'):
+                    config_content = raw_data.decode("utf-16", errors="ignore")
+                elif raw_data.startswith(b'\xef\xbb\xbf'):
+                    config_content = raw_data.decode("utf-8-sig", errors="ignore")
+                else:
+                    try:
+                        config_content = raw_data.decode("utf-8")
+                    except UnicodeDecodeError:
+                        config_content = raw_data.decode("latin-1") # Hiçbir şey çökmez, metne çevrilir
 
-                deps=self.discovery.analyze_requirements(config_content , file_name)
+                deps = self.discovery.analyze_requirements(config_content, file_name)
                 print(f"> Motordan dönen sonuç: {deps}")
                 if deps:
                     all_dependencies.extend(deps)
