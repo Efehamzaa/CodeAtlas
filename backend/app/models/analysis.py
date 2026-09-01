@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy import JSON, Column, Integer, String, Float, ForeignKey, DateTime, column
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .base import Base
@@ -11,7 +11,11 @@ class RepositoryFile(Base):
     path = Column(String)
     extension = Column(String)
     language = Column(String)
-    hash = Column(String)
+    hash = Column(String , nullable=True)
+
+    functions=Column(JSON, default=list)
+    classes=Column(JSON, default=list)
+    imports=Column(JSON, default=list)
 
     repository = relationship("Repository", backref="files")
 

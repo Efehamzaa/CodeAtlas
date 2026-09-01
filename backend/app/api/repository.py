@@ -37,8 +37,9 @@ async def analyze_repository(request: RepositoryRequest, db: AsyncSession = Depe
         # 3. Veritabanına yazma işlemini tetikleme
         await save_analysis_results(
             db=db, 
-            repo_data=repo_info, 
-            parsed_dependencies=dependencies_list
+            repo_data={"url": request.url, "name": repo_info["name"], "owner": repo_info["owner"]}, 
+            parsed_dependencies=dependencies_list,
+            analyzed_files=getattr(response_data, 'files', [])
         )
         
         return response_data
