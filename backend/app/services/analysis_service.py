@@ -3,11 +3,13 @@ from app.services.scanner_service import ScannerService
 from app.engines.architecture.engine import ArchitectureEngine
 from app.schemas.repository import RepositoryResponse, AnalyzedFile, FileArchitecture
 from app.engines.discovery.engine import DiscoveryEngine
+from app.engines.security.SecurityEngine import SecurityEngine
 
 class AnalysisService:
     def __init__(self):
         self.scanner = ScannerService()
         self.architecture = ArchitectureEngine()
+        self.security = SecurityEngine()
         self.discovery = DiscoveryEngine()
 
     def analyze_full_repository(self, repo_path: str) -> RepositoryResponse:
@@ -17,6 +19,7 @@ class AnalysisService:
         
         analyzed_files_list = []
         all_dependencies = []
+        all_security_findings = []
         
         for relative_path in file_tree:
             if relative_path.endswith('.py'):
@@ -29,6 +32,11 @@ class AnalysisService:
                     
                     
                     file_data = self.architecture.analyze_code(source_content)
+
+                    sec_findings = self.security.analyze_code(source_content)
+                    for finding in sec_findings:
+                        finding["file_path"] = relative_path
+                        all_security_findings.append(finding)
                     
                     
                     arch_data = FileArchitecture(
@@ -79,7 +87,8 @@ class AnalysisService:
                 print(f"Uyarı: {config_file} analiz edilemedi. Hata: {str(e)}")
 
         return RepositoryResponse(
-            files=analyzed_files_list, 
+            dependencies=all_dependencies,
             frameworks=[], 
-            dependencies=all_dependencies
+            files=analyzed_files_list, 
+            security_findings=all_security_findings
         )

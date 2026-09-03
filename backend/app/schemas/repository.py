@@ -40,10 +40,19 @@ class AnalyzedFile(BaseModel):
     file_path:str
     architecture:FileArchitecture
 
+class SecurityFindingItem(BaseModel):
+    type:str
+    severity:str
+    description:str
+    file_path:str
+    line_number:Optional[int] = None
+    
+
 class RepositoryResponse(BaseModel):
     dependencies : List[Dependency] = []
     frameworks : List[Framework] = []
     files: List[AnalyzedFile] = []
+    security_findings: List[SecurityFindingItem] = []
 
 
 

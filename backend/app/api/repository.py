@@ -4,7 +4,7 @@ from app.schemas.repository import RepositoryRequest, RepositoryResponse
 from app.services.repository_service import RepositoryService
 from app.services.analysis_service import AnalysisService   
 from app.core.database import get_db
-from app.services.db_service import save_analysis_results # Yazdığımız kayıt servisi
+from app.services.db_service import save_analysis_results
 
 router = APIRouter(prefix="/repositories", tags=["Repositories"])
 repo_service = RepositoryService()
@@ -33,14 +33,20 @@ async def analyze_repository(request: RepositoryRequest, db: AsyncSession = Depe
             dep.model_dump() if hasattr(dep, "model_dump") else (dep.dict() if hasattr(dep, "dict") else dep) 
             for dep in getattr(response_data, 'dependencies', [])
         ]
+
+        security_findings_list = [
+            sf.model_dump() if hasattr(sf, "model_dump") else (sf.dict() if hasattr(sf, "dict") else sf) 
+            for sf in getattr(response_data, 'security_findings', [])
+        ]
         
         # 3. Veritabanına yazma işlemini tetikleme
         await save_analysis_results(
             db=db, 
             repo_data={"url": request.url, "name": repo_info["name"], "owner": repo_info["owner"]}, 
             parsed_dependencies=dependencies_list,
-            analyzed_files=getattr(response_data, 'files', [])
-        )
+            analyzed_files=getattr(response_data, 'files', []),
+            security_findings=security_findings_list # GÜVENLİK PARAMETRESİ EKLENDİ
+        )  
         
         return response_data
         

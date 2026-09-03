@@ -2,12 +2,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.core import Repository
 from app.models.analysis import Analysis, RepositoryFile
 from app.models.findings import Technology
+from app.models.findings import SecurityFinding
 
 async def save_analysis_results(
     db: AsyncSession, 
     repo_data: dict, 
     parsed_dependencies: list, 
     analyzed_files: list, 
+    security_findings: list,
     user_id: int = 1
 ):
     print(f"--- DB SERVİSE GELEN BAĞIMLILIKLAR: {parsed_dependencies} ---")
@@ -60,6 +62,17 @@ async def save_analysis_results(
             imports=file_data.architecture.imports
         )
         db.add(new_file)
+
+    print(f"--- GÜVENLİK BULGULARI YAZILIYOR. Toplam: {len(security_findings)} ---")
+    for finding in security_findings:
+        new_finding = SecurityFinding(
+            analysis_id=new_analysis.id,
+            severity=finding.get("severity", "High"),
+            type=finding.get("type", "Unknown"),
+            file_path=finding.get("file_path", "Unknown"),
+            line_number=finding.get("line_number")
+        )
+        db.add(new_finding)
 
     
     await db.commit()
