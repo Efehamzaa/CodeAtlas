@@ -4,6 +4,7 @@ from app.engines.architecture.engine import ArchitectureEngine
 from app.schemas.repository import RepositoryResponse, AnalyzedFile, FileArchitecture
 from app.engines.discovery.engine import DiscoveryEngine
 from app.engines.security.SecurityEngine import SecurityEngine
+from app.engines.ai.AlEngine import AIEngine
 
 class AnalysisService:
     def __init__(self):
@@ -11,6 +12,7 @@ class AnalysisService:
         self.architecture = ArchitectureEngine()
         self.security = SecurityEngine()
         self.discovery = DiscoveryEngine()
+        self.ai_engine = AIEngine()
 
     def analyze_full_repository(self, repo_path: str) -> RepositoryResponse:
         scan_results = self.scanner.scan_repository(repo_path)
@@ -86,9 +88,16 @@ class AnalysisService:
             except Exception as e:
                 print(f"Uyarı: {config_file} analiz edilemedi. Hata: {str(e)}")
 
+        print("--- SCA (Tedarik Zinciri) Analizi Başlıyor ----")
+        sca_findings=self.security.analyze_dependencies(all_dependencies)
+        all_security_findings.extend(sca_findings)
+
+        ai_report=self.ai_engine.generate_remediation_report(all_security_findings)
+
         return RepositoryResponse(
             dependencies=all_dependencies,
             frameworks=[], 
             files=analyzed_files_list, 
-            security_findings=all_security_findings
+            security_findings=all_security_findings,
+            ai_analysis=ai_report
         )

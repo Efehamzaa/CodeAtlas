@@ -1,6 +1,6 @@
 from pydantic import BaseModel , field_validator
 from urllib.parse import urlparse
-from typing import List , Optional
+from typing import List , Optional , Any , Dict
 
 class RepositoryRequest(BaseModel):
     url: str
@@ -53,6 +53,7 @@ class RepositoryResponse(BaseModel):
     frameworks : List[Framework] = []
     files: List[AnalyzedFile] = []
     security_findings: List[SecurityFindingItem] = []
+    ai_analysis: Optional[Dict[str, Any]] = None
 
 
 

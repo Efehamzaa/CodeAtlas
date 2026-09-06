@@ -11,3 +11,4 @@ __pycache__/
 codeatlas.db
 
 .env
+backend/.env
