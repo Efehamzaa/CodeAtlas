@@ -7,7 +7,7 @@ class RepositoryFile(Base):
     __tablename__ = "repository_files"
 
     id = Column(Integer, primary_key=True, index=True)
-    repository_id = Column(Integer, ForeignKey("repositories.id"))
+    analysis_id = Column(Integer, ForeignKey("analyses.id"))
     path = Column(String)
     extension = Column(String)
     language = Column(String)
@@ -17,7 +17,7 @@ class RepositoryFile(Base):
     classes=Column(JSON, default=list)
     imports=Column(JSON, default=list)
 
-    repository = relationship("Repository", backref="files")
+    analysis = relationship("Analysis", backref="files")
 
 class Analysis(Base):
     __tablename__ = "analyses"

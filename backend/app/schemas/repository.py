@@ -30,6 +30,7 @@ class Dependency(BaseModel):
 class Framework(BaseModel):
     name:str
     ecosystem:str
+    category:str
 
 class FileArchitecture(BaseModel):
     imports:List[str] = []
