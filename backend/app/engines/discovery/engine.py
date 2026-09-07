@@ -2,6 +2,7 @@ import json
 import re  # Performans için döngü içinden alınıp en başa taşındı
 from .requirements_parser import parse_requirements
 from .package_json import PackageJsonParser
+from app.engines.knowledge.tech_signatures import TECHNOLOGY_SIGNATURES
 
 try:
     import tomllib
@@ -22,6 +23,27 @@ class DiscoveryEngine:
             return self._parse_pyproject_toml(content)
         else:
             raise ValueError(f"Desteklenmeyen dosya yapısı: {file_name}")
+
+    def detect_frameworks(self, dependencies: list) -> list:
+        """
+        Bulunan bağımlılıkları (dependencies) bilgi tabanı ile eşleştirerek projenin teknoloji yığınını çıkarır.
+        """
+        detected_frameworks = []
+        for dep in dependencies:
+            
+            pkg_name = dep.get("name", "").lower() if isinstance(dep, dict) else getattr(dep, "name", "").lower()
+            
+            for category, packages in TECHNOLOGY_SIGNATURES.items():
+                if pkg_name in packages:
+                
+                    if not any(f.get("name") == pkg_name.capitalize() for f in detected_frameworks):
+                        detected_frameworks.append({
+                            "name": pkg_name.capitalize(),
+                            "category": category,
+                            "ecosystem":"pip"
+                        })
+                        
+        return detected_frameworks
 
     def _parse_pyproject_toml(self, content: str) -> list:
         """

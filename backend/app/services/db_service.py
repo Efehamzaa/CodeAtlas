@@ -10,6 +10,7 @@ async def save_analysis_results(
     parsed_dependencies: list, 
     analyzed_files: list, 
     security_findings: list,
+    ai_report: dict=None,
     user_id: int = 1
 ):
     print(f"--- DB SERVİSE GELEN BAĞIMLILIKLAR: {parsed_dependencies} ---")
@@ -29,7 +30,9 @@ async def save_analysis_results(
     new_analysis = Analysis(
         repository_id=new_repo.id,
         status="success",
-        confidence_score=0.98
+        confidence_score=0.,
+        risk_score=ai_report.get("risk_score") if ai_report else None,
+        ai_summary=ai_report.get("summary") if ai_report else None
     )
     db.add(new_analysis)
     await db.flush()

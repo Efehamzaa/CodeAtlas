@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Column, Integer, String, Float, ForeignKey, DateTime, column
+from sqlalchemy import JSON, Column, Integer, String, Float, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .base import Base
@@ -26,6 +26,11 @@ class Analysis(Base):
     repository_id = Column(Integer, ForeignKey("repositories.id"))
     status = Column(String, default="started")
     confidence_score = Column(Float, nullable=True)
+    
+    risk_score = Column(Integer, nullable=True)
+    ai_summary = Column(Text, nullable=True)
+
+    
     started_at = Column(DateTime, default=datetime.utcnow)
     finished_at = Column(DateTime, nullable=True)
 

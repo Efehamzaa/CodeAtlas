@@ -1,10 +1,15 @@
 import os
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.services.db_service import save_analysis_results
 from app.services.scanner_service import ScannerService
 from app.engines.architecture.engine import ArchitectureEngine
 from app.schemas.repository import RepositoryResponse, AnalyzedFile, FileArchitecture
 from app.engines.discovery.engine import DiscoveryEngine
 from app.engines.security.SecurityEngine import SecurityEngine
 from app.engines.ai.AlEngine import AIEngine
+
+
+
 
 class AnalysisService:
     def __init__(self):
@@ -14,7 +19,7 @@ class AnalysisService:
         self.discovery = DiscoveryEngine()
         self.ai_engine = AIEngine()
 
-    def analyze_full_repository(self, repo_path: str) -> RepositoryResponse:
+    async def analyze_full_repository(self, repo_path: str , repo_data:dict , db: AsyncSession) -> RepositoryResponse:
         scan_results = self.scanner.scan_repository(repo_path)
         file_tree = scan_results.get("tree", [])
         config_files = scan_results.get("config_files", [])
@@ -89,14 +94,30 @@ class AnalysisService:
                 print(f"Uyarı: {config_file} analiz edilemedi. Hata: {str(e)}")
 
         print("--- SCA (Tedarik Zinciri) Analizi Başlıyor ----")
-        sca_findings=self.security.analyze_dependencies(all_dependencies)
+        sca_findings = self.security.analyze_dependencies(all_dependencies)
         all_security_findings.extend(sca_findings)
 
-        ai_report=self.ai_engine.generate_remediation_report(all_security_findings)
+        
+        detected_frameworks = self.discovery.detect_frameworks(all_dependencies)
 
+        
+        ai_report = self.ai_engine.generate_remediation_report(all_security_findings)
+
+        #  TÜM VERİLERİ VERİTABANINA KAYDETME
+        await save_analysis_results(
+            db=db,
+            repo_data=repo_data,
+            parsed_dependencies=all_dependencies,
+            analyzed_files=analyzed_files_list,
+            security_findings=all_security_findings,
+            ai_report=ai_report,
+            user_id=1
+        )
+
+        # GÜNCELLENMİŞ JSON YANITINI DÖNDÜRME
         return RepositoryResponse(
             dependencies=all_dependencies,
-            frameworks=[], 
+            frameworks=detected_frameworks, 
             files=analyzed_files_list, 
             security_findings=all_security_findings,
             ai_analysis=ai_report

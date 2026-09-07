@@ -4,7 +4,6 @@ from app.schemas.repository import RepositoryRequest, RepositoryResponse
 from app.services.repository_service import RepositoryService
 from app.services.analysis_service import AnalysisService   
 from app.core.database import get_db
-from app.services.db_service import save_analysis_results
 
 router = APIRouter(prefix="/repositories", tags=["Repositories"])
 repo_service = RepositoryService()
@@ -15,38 +14,24 @@ async def analyze_repository(request: RepositoryRequest, db: AsyncSession = Depe
     try:
         temp_path = repo_service.clone_repository(request.url)
         
-        # 1. Mevcut analiz motoru çalışıyor
-        response_data = analysis_service.analyze_full_repository(temp_path)
         
-        if hasattr(response_data, 'repository_url'):
-            response_data.repository_url = request.url
-
-        # 2. Veritabanına kaydetme işlemi için veriyi hazırlama
         repo_info = {
             "url": request.url,
             "name": request.url.split("/")[-1].replace(".git", ""),
             "owner": request.url.split("/")[-2] if "github.com" in request.url else "Unknown"
         }
         
-        # Pydantic objelerini dict yapısına çeviriyoruz
-        dependencies_list = [
-            dep.model_dump() if hasattr(dep, "model_dump") else (dep.dict() if hasattr(dep, "dict") else dep) 
-            for dep in getattr(response_data, 'dependencies', [])
-        ]
-
-        security_findings_list = [
-            sf.model_dump() if hasattr(sf, "model_dump") else (sf.dict() if hasattr(sf, "dict") else sf) 
-            for sf in getattr(response_data, 'security_findings', [])
-        ]
         
-        # 3. Veritabanına yazma işlemini tetikleme
-        await save_analysis_results(
-            db=db, 
-            repo_data={"url": request.url, "name": repo_info["name"], "owner": repo_info["owner"]}, 
-            parsed_dependencies=dependencies_list,
-            analyzed_files=getattr(response_data, 'files', []),
-            security_findings=security_findings_list # GÜVENLİK PARAMETRESİ EKLENDİ
-        )  
+        response_data = await analysis_service.analyze_full_repository(
+            repo_path=temp_path,
+            repo_data=repo_info,
+            db=db
+        )
+        
+        if hasattr(response_data, 'repository_url'):
+            response_data.repository_url = request.url
+
+        
         
         return response_data
         
