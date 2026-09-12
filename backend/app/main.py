@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.api import health, repository, scanner
@@ -24,6 +25,14 @@ app = FastAPI(
     description="Understand Any Repository",
     version="0.1.0",
     lifespan=lifespan  # Yaşam döngüsünü uygulamaya bağladık
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"], # Next.js adresine izin ver
+    allow_credentials=True,
+    allow_methods=["*"], # GET, POST vb. tüm metodlara izin ver
+    allow_headers=["*"],
 )
 
 app.include_router(health.router)
