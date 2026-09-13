@@ -29,7 +29,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"], # Next.js adresine izin ver
+    allow_origins=["*"], # Next.js adresine izin ver
     allow_credentials=True,
     allow_methods=["*"], # GET, POST vb. tüm metodlara izin ver
     allow_headers=["*"],
