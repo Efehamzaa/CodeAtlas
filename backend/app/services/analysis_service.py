@@ -1,81 +1,52 @@
 import os
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.db_service import save_analysis_results
 from app.services.scanner_service import ScannerService
 from app.engines.architecture.engine import ArchitectureEngine
-from app.schemas.repository import RepositoryResponse, AnalyzedFile, FileArchitecture
 from app.engines.discovery.engine import DiscoveryEngine
-from app.engines.security.SecurityEngine import SecurityEngine
-from app.engines.ai.AlEngine import AIEngine
-
-
-
 
 class AnalysisService:
     def __init__(self):
         self.scanner = ScannerService()
         self.architecture = ArchitectureEngine()
-        self.security = SecurityEngine()
         self.discovery = DiscoveryEngine()
-        self.ai_engine = AIEngine()
+        
 
-    async def analyze_full_repository(self, repo_path: str , repo_data:dict , db: AsyncSession) -> RepositoryResponse:
+    async def analyze_full_repository(self, repo_path: str, repo_data: dict, db: AsyncSession) -> dict:
         scan_results = self.scanner.scan_repository(repo_path)
         file_tree = scan_results.get("tree", [])
         config_files = scan_results.get("config_files", [])
         
         analyzed_files_list = []
         all_dependencies = []
-        all_security_findings = []
+        
         
         for relative_path in file_tree:
             if relative_path.endswith('.py'):
                 absolute_path = os.path.join(repo_path, relative_path)
-                
                 try:
-                    
                     with open(absolute_path, "r", encoding="utf-8") as f:
                         source_content = f.read()
                     
-                    
                     file_data = self.architecture.analyze_code(source_content)
-
-                    sec_findings = self.security.analyze_code(source_content)
-                    for finding in sec_findings:
-                        finding["file_path"] = relative_path
-                        all_security_findings.append(finding)
                     
-                    
-                    arch_data = FileArchitecture(
-                        functions=file_data.get("function", []),
-                        classes=file_data.get("class", []),
-                        imports=file_data.get("import", [])
-                    )
-                    
-                    
-                    analyzed_file = AnalyzedFile(
-                        file_path=relative_path,
-                        architecture=arch_data
-                    )
-                    analyzed_files_list.append(analyzed_file)
-                    
+                    analyzed_files_list.append({
+                        "file_path": relative_path,
+                        "architecture": {
+                            "functions": file_data.get("function", []),
+                            "classes": file_data.get("class", []),
+                            "imports": file_data.get("import", [])
+                        }
+                    })
                 except Exception as e:
-                    print(f"Uyarı: {relative_path} analiz edilemedi. Hata: {str(e)}")
+                    print(f"[!] {relative_path} analiz edilemedi: {str(e)}")
 
-
-        print("--- TEST BAŞLANGICI ---")
-        print("BULUNAN CONFIG DOSYALARI:", config_files)
-
+        
         for config_file in config_files:
             try:
                 file_name = os.path.basename(config_file)
-                print(f"> Şu an inceleniyor: {file_name}")
-                
-                # Dosyayı doğrudan bayt okuyup tüm olası BOM ve kodlama hatalarını bypass ediyoruz
                 with open(config_file, "rb") as f:
                     raw_data = f.read()
                 
-                # Karakter kodlamasını otomatik algılayan en güvenli dönüştürme
                 if raw_data.startswith(b'\xff\xfe') or raw_data.startswith(b'\xfe\xff'):
                     config_content = raw_data.decode("utf-16", errors="ignore")
                 elif raw_data.startswith(b'\xef\xbb\xbf'):
@@ -84,41 +55,19 @@ class AnalysisService:
                     try:
                         config_content = raw_data.decode("utf-8")
                     except UnicodeDecodeError:
-                        config_content = raw_data.decode("latin-1") # Hiçbir şey çökmez, metne çevrilir
+                        config_content = raw_data.decode("latin-1")
 
                 deps = self.discovery.analyze_requirements(config_content, file_name)
-                print(f"> Motordan dönen sonuç: {deps}")
                 if deps:
                     all_dependencies.extend(deps)
             except Exception as e:
-                print(f"Uyarı: {config_file} analiz edilemedi. Hata: {str(e)}")
+                print(f"[!] {config_file} okuma hatası: {str(e)}")
 
-        print("--- SCA (Tedarik Zinciri) Analizi Başlıyor ----")
-        sca_findings = self.security.analyze_dependencies(all_dependencies)
-        all_security_findings.extend(sca_findings)
-
-        
         detected_frameworks = self.discovery.detect_frameworks(all_dependencies)
 
         
-        ai_report = self.ai_engine.generate_remediation_report(all_security_findings)
-
-        #  TÜM VERİLERİ VERİTABANINA KAYDETME
-        await save_analysis_results(
-            db=db,
-            repo_data=repo_data,
-            parsed_dependencies=all_dependencies,
-            analyzed_files=analyzed_files_list,
-            security_findings=all_security_findings,
-            ai_report=ai_report,
-            user_id=1
-        )
-
-        # GÜNCELLENMİŞ JSON YANITINI DÖNDÜRME
-        return RepositoryResponse(
-            dependencies=all_dependencies,
-            frameworks=detected_frameworks, 
-            files=analyzed_files_list, 
-            security_findings=all_security_findings,
-            ai_analysis=ai_report
-        )
+        return {
+            "dependencies": all_dependencies,
+            "frameworks": detected_frameworks,
+            "files": analyzed_files_list
+        }

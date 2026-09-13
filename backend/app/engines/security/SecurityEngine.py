@@ -8,7 +8,7 @@ class SecurityEngine:
         self.secret_pattern = re.compile(r"(?i)(password|secret|api_key|token|auth_key)")
 
     def analyze_code(self, code):
-        print(f"\n--- SECURITY ENGINE'E GELEN KOD --- \n{code}\n----------------------------------")
+        print(f"\n--- SECURITY ENGINE'E GELEN KOD --- \n{code[:200]}...\n----------------------------------")
         try:
             tree = ast.parse(code)
             findings = []
@@ -25,6 +25,21 @@ class SecurityEngine:
         except Exception as e:
             print(f"MOTOR İÇİNDE BEKLENMEYEN HATA: {e}")
             return []
+
+    def analyze_raw_secrets(self, code_content: str):
+        """Python olmayan dosyalar (.env, .json vb.) için satır bazlı raw regex taraması"""
+        findings = []
+        lines = code_content.splitlines()
+        for idx, line in enumerate(lines):
+            # Eğer satırda secret kelimeleri geçiyorsa ve bir atama (= veya :) yapılmışsa
+            if self.secret_pattern.search(line) and any(char in line for char in ["=", ":"]) and len(line.strip()) > 5:
+                findings.append({
+                    "type": "Exposed Credential (Raw)",
+                    "severity": "Critical",
+                    "description": "Konfigürasyon veya metin dosyasında açık API anahtarı / kimlik bilgisi sızıntısı.",
+                    "line_number": idx + 1
+                })
+        return findings
 
     def _check_for_dangerous_calls(self, tree):
         findings = []
@@ -98,7 +113,6 @@ class SecurityEngine:
                             "line_number": getattr(node, 'lineno', 0)
                         })
         return findings
-
 
     def analyze_dependencies(self, dependencies):
         findings = []

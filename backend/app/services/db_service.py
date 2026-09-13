@@ -1,76 +1,84 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.core import Repository
 from app.models.analysis import Analysis, RepositoryFile
-from app.models.findings import Technology
-from app.models.findings import SecurityFinding
+from app.models.findings import Technology, SecurityFinding
 
 async def save_analysis_results(
     db: AsyncSession, 
-    repo_data: dict, 
-    parsed_dependencies: list, 
+    repo_url: str, 
+    risk_score: int,
+    dependencies: list, 
+    frameworks: list,
     analyzed_files: list, 
     security_findings: list,
-    ai_report: dict=None,
     user_id: int = 1
 ):
     try:
+        repo_name = repo_url.split("/")[-1].replace(".git", "")
+        owner = repo_url.split("/")[-2] if "github.com" in repo_url else "Unknown"
+
+        
         new_repo = Repository(
             user_id=user_id,
-            github_url=repo_data.get("url", ""),
-            name=repo_data.get("name", "Unknown"),
-            owner=repo_data.get("owner", "Unknown"),
+            github_url=repo_url,
+            name=repo_name,
+            owner=owner,
             status="completed"
         )
         db.add(new_repo)
         await db.flush() 
 
+        
         new_analysis = Analysis(
             repository_id=new_repo.id,
             status="success",
-            confidence_score=0.0,
-            risk_score=ai_report.get("risk_score") if ai_report else None,
-            ai_summary=ai_report.get("summary") if ai_report else None
+            risk_score=risk_score
         )
         db.add(new_analysis)
         await db.flush()
 
-        for dep in parsed_dependencies:
-            new_tech = Technology(
-                analysis_id=new_analysis.id,
-                category="dependency",
-                name=dep.get("name"),
-                version=dep.get("version")
-            )
-            db.add(new_tech)
+        
+        for dep in dependencies:
+            name = getattr(dep, "name", dep.get("name") if isinstance(dep, dict) else "")
+            version = getattr(dep, "version", dep.get("version") if isinstance(dep, dict) else "")
+            if name:
+                db.add(Technology(analysis_id=new_analysis.id, category="dependency", name=name, version=version))
+            
+        for fw in frameworks:
+            name = getattr(fw, "name", fw.get("name") if isinstance(fw, dict) else "")
+            if name:
+                db.add(Technology(analysis_id=new_analysis.id, category="framework", name=name, version=""))
 
+        
         for file_data in analyzed_files:
-            ext = file_data.file_path.split('.')[-1] if '.' in file_data.file_path else ""
-            lang = "python" if ext == "py" else "unknown"
+            path = file_data.get("file_path", "")
+            ext = path.split('.')[-1] if '.' in path else ""
+            arch = file_data.get("architecture", {})
 
-            new_file = RepositoryFile(
+            db.add(RepositoryFile(
                 analysis_id=new_analysis.id, 
-                path=file_data.file_path,
+                path=path,
                 extension=ext,
-                language=lang,
-                functions=file_data.architecture.functions,
-                classes=file_data.architecture.classes,
-                imports=file_data.architecture.imports
-            )
-            db.add(new_file)
+                language="python" if ext == "py" else "unknown",
+                functions=arch.get("functions", []),
+                classes=arch.get("classes", []),
+                imports=arch.get("imports", [])
+            ))
 
+        
         for finding in security_findings:
-            new_finding = SecurityFinding(
+            db.add(SecurityFinding(
                 analysis_id=new_analysis.id,
-                severity=finding.get("severity", "High"),
-                type=finding.get("type", "Unknown"),
-                file_path=finding.get("file_path", "Unknown"),
-                line_number=finding.get("line_number")
-            )
-            db.add(new_finding)
+                severity=getattr(finding, "severity", "High"),
+                type=getattr(finding, "type", "Unknown"),
+                file_path=getattr(finding, "file_path", "Unknown"),
+                line_number=getattr(finding, "line_number", 0)
+            ))
 
         await db.commit()
         return new_analysis.id
 
     except Exception as e:
         await db.rollback()
+        print(f"[!] DB Kayıt Hatası: {e}")
         raise e

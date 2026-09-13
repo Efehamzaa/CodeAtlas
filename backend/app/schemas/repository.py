@@ -1,60 +1,38 @@
-from pydantic import BaseModel , field_validator
-from urllib.parse import urlparse
-from typing import List , Optional , Any , Dict
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+
+class RepositoryFile(BaseModel):
+    path: str
+
+class Dependency(BaseModel):
+    name: str
+    version: Optional[str] = "Bilinmiyor"
+
+class Framework(BaseModel):
+    name: str
+    ecosystem: Optional[str] = "Sistem"
+
+class SecurityFinding(BaseModel):
+    type: str
+    severity: str
+    description: str
+    file_path: str = "Belirtilmemiş"
+    line_number: Optional[int] = 0
+    recommendation: Optional[str] = None
+
 
 class RepositoryRequest(BaseModel):
     url: str
-    @field_validator("url")
-    @classmethod
-    def check_github_url(cls,value:str) -> str:
-        value = value.strip()
 
-        if not value.lower().startswith("https://github.com/"):
-            raise ValueError("Lütfen geçerli bir GitHub repository URL'si girin.")
-
-        parsed=urlparse(value)
-        path_parts=[p for p in parsed.path.strip("/").split("/") if p]
-
-        if path_parts and path_parts[-1].endswith(".git"):
-            path_parts[-1]=path_parts[-1][:-4]
-
-        if len(path_parts)<2:
-            raise ValueError("Geçerli bir repository belirtmelisiniz (Örn: https://github.com/kullanici/repo).")
-        return value
-
-class Dependency(BaseModel):
-    name:str
-    ecosystem:str
-    version:Optional[str] = None
-
-class Framework(BaseModel):
-    name:str
-    ecosystem:str
-    category:str
-
-class FileArchitecture(BaseModel):
-    imports:List[str] = []
-    functions:List[str] = []
-    classes:List[str] = []
-
-class AnalyzedFile(BaseModel):
-    file_path:str
-    architecture:FileArchitecture
-
-class SecurityFindingItem(BaseModel):
-    type:str
-    severity:str
-    description:str
-    file_path:str
-    line_number:Optional[int] = None
-    
 
 class RepositoryResponse(BaseModel):
-    dependencies : List[Dependency] = []
-    frameworks : List[Framework] = []
-    files: List[AnalyzedFile] = []
-    security_findings: List[SecurityFindingItem] = []
-    ai_analysis: Optional[Dict[str, Any]] = None
+    repository_url: str
+    risk_score: int = Field(default=0, ge=0, le=100)
+    repository_files: List[RepositoryFile] = Field(default_factory=list)
+    dependencies: List[Dependency] = Field(default_factory=list)
+    frameworks: List[Framework] = Field(default_factory=list)
+    vulnerabilities: List[SecurityFinding] = Field(default_factory=list)
 
 
 
